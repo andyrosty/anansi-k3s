@@ -137,6 +137,7 @@ The `Makefile` wraps the most common operations so you do not have to remember t
 | Target | Command | Description |
 | --- | --- | --- |
 | `make configure-cert-manager-secrets` | `ansible-playbook playbooks/configure-cert-manager-secrets.yml -e cloudflare_api_token="$(CLOUDFLARE_API_TOKEN)"` | Create/update Cloudflare API token secret for cert-manager |
+| `make configure-keycloak-secrets` | `ansible-playbook playbooks/configure-keycloak-secrets.yml --ask-vault-pass -e @inventory/group_vars/keycloak-secrets.yml` | Create/update Keycloak database and admin secrets from an encrypted Vault file |
 | `make ping` | `ansible all -m ping` | Quick reachability test |
 | `make inventory` | `ansible-inventory --graph` | Verify inventory and groups |
 | `make preflight` | `ansible-playbook playbooks/preflight.yml` | Read‑only health checks on all nodes |
@@ -150,6 +151,35 @@ The `Makefile` wraps the most common operations so you do not have to remember t
 | `make site` | `ansible-playbook playbooks/site.yml -e github_token="$(GITHUB_TOKEN)" -e cloudflare_api_token="$(CLOUDFLARE_API_TOKEN)"` | End‑to‑end run: preflight → bootstrap → k3s → cert-manager secret → Flux → checks |
 
 All targets simply wrap `ansible` or `ansible-playbook`, so you can always run the equivalent commands manually.
+
+### Keycloak secrets with Ansible Vault
+
+Store the Keycloak passwords in an Ansible Vault file so they are not supplied as Ansible extra-variable command-line arguments or stored in shell history. Create it once on your control machine:
+
+```bash
+ansible-vault create inventory/group_vars/keycloak-secrets.yml
+```
+
+Enter the following values in the editor, substituting strong passwords:
+
+```yaml
+keycloak_db_password: YOUR_DB_PASSWORD
+keycloak_admin_password: YOUR_ADMIN_PASSWORD
+```
+
+The resulting file is encrypted and can be committed to the repository; do not commit the Vault password. Apply the secrets with:
+
+```bash
+ansible-playbook playbooks/configure-keycloak-secrets.yml \
+  --ask-vault-pass \
+  -e @inventory/group_vars/keycloak-secrets.yml
+```
+
+Or use:
+
+```bash
+make configure-keycloak-secrets
+```
 
 ### Running the full site playbook
 
@@ -224,4 +254,3 @@ Use the smoke test to validate that basic scheduling, service routing, and your 
 ## License
 
 MIT — see `LICENSE`.
-
